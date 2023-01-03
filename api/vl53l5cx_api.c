@@ -87,6 +87,8 @@ static uint8_t _vl53l5cx_poll_for_answer(
 		status |= RdMulti(&(p_dev->platform), address,
 				p_dev->temp_buffer, size);
 printf("poll: %x\n", p_dev->temp_buffer[pos] & mask);
+//for(int i = 0; i < size; i++) printf("%x ", p_dev->temp_buffer[pos] & mask);
+//printf("\n");
 		status |= WaitMs(&(p_dev->platform), 10);
 
 		if(timeout >= (uint8_t)200)	/* 2s timeout */
@@ -324,6 +326,8 @@ uint8_t vl53l5cx_init(
 	status |= WrByte(&(p_dev->platform), 0x000A, 0x01);
 	status |= WaitMs(&(p_dev->platform), 100);
 
+printf("sw reboot sequence %d\n", status);
+
 	/* Wait for sensor booted (several ms required to get sensor ready ) */
 	status |= WrByte(&(p_dev->platform), 0x7fff, 0x00);
 	status |= _vl53l5cx_poll_for_answer(p_dev, 1, 0, 0x06, 0xff, 1);
@@ -334,15 +338,21 @@ uint8_t vl53l5cx_init(
 	status |= WrByte(&(p_dev->platform), 0x000E, 0x01);
 	status |= WrByte(&(p_dev->platform), 0x7fff, 0x02);
 
+printf("wait for sensor booted %d\n", status);
+
 	/* Enable FW access */
 	status |= WrByte(&(p_dev->platform), 0x03, 0x0D);
 	status |= WrByte(&(p_dev->platform), 0x7fff, 0x01);
 	status |= _vl53l5cx_poll_for_answer(p_dev, 1, 0, 0x21, 0x10, 0x10);
 	status |= WrByte(&(p_dev->platform), 0x7fff, 0x00);
 
+printf("enable fw access %d\n", status);
+
 	/* Enable host access to GO1 */
 	status |= RdByte(&(p_dev->platform), 0x7fff, &tmp);
 	status |= WrByte(&(p_dev->platform), 0x0C, 0x01);
+
+printf("enable host access %d\n", status);
 
 	/* Power ON status */
 	status |= WrByte(&(p_dev->platform), 0x7fff, 0x00);
@@ -360,6 +370,8 @@ uint8_t vl53l5cx_init(
 	status |= WrByte(&(p_dev->platform), 0x21A, 0x00);
 	status |= WrByte(&(p_dev->platform), 0x219, 0x00);
 	status |= WrByte(&(p_dev->platform), 0x21B, 0x00);
+
+printf("power on status %d\n", status);
 
 	/* Wake up MCU */
 	status |= WrByte(&(p_dev->platform), 0x7fff, 0x00);

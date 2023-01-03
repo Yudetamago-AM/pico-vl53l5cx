@@ -29,8 +29,8 @@ int main (void) {
     gpio_set_function(8, GPIO_FUNC_I2C);
     gpio_set_function(9, GPIO_FUNC_I2C);
 
-    VL53L5CX_Configuration dev;
-    VL53L5CX_ResultsData results;
+    static VL53L5CX_Configuration dev;
+    static VL53L5CX_ResultsData results;
 
     dev.platform.address = 0x29;
     //dev.platform.i2c_bus = I2C_BUS_TOF;

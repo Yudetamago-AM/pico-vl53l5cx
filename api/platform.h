@@ -64,6 +64,8 @@
 #define _PLATFORM_H_
 #pragma once
 
+#include <stdio.h>
+
 #include <stdint.h>
 #include <string.h>
 #include "pico/stdlib.h"

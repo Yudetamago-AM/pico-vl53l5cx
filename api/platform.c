@@ -64,17 +64,34 @@
 #include "platform.h"
 
 extern i2c_inst_t vl53l5cx_i2c;
+//uint8_t i2c_buffer[32770];
+
+int i2c_write_with_printf(i2c_inst_t* i2c_p, uint8_t addr, uint8_t* src, size_t size, bool nostop) {
+	printf("w: %x %0x %d ", addr, *src, size);
+	int ret = i2c_write_blocking(i2c_p, addr, src, size, nostop);
+	printf("s: %d\n", ret);
+	return (ret);
+}
+
+int i2c_read_with_printf(i2c_inst_t* i2c_p, uint8_t addr, uint8_t* src, size_t size, bool nostop) {
+	printf("r: %x %0x %d ", addr, *src, size);
+	int ret = i2c_read_blocking(i2c_p, addr, src, size, nostop);
+	printf("s: %d\n", ret);
+	return 	(ret);
+}
 
 uint8_t RdByte(
 		VL53L5CX_Platform *p_platform,
 		uint16_t RegisterAdress,
 		uint8_t *p_value)
 {	
+	//RdMulti(p_platform, RegisterAdress, p_value, 1);
+	#if 1
 	// addr: higher byte first, lower byte second.
 	uint8_t tmp[2] = {(uint8_t)(RegisterAdress >> 8 & 0xFF), (uint8_t)(RegisterAdress & 0xFF)};
-	i2c_write_blocking(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
-	i2c_read_blocking(&vl53l5cx_i2c, p_platform->address, p_value, 1, false);
-
+	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
+	i2c_read_with_printf(&vl53l5cx_i2c, p_platform->address, p_value, 1, false);
+	#endif
 	return 0;
 }
 
@@ -83,10 +100,12 @@ uint8_t WrByte(
 		uint16_t RegisterAdress,
 		uint8_t value)
 {
+	//WrMulti(p_platform, RegisterAdress, &value, 1);
+	#if 1
 	uint8_t tmp[2] = {(uint8_t)(RegisterAdress >> 8 & 0xFF), (uint8_t)(RegisterAdress & 0xFF)};
-	i2c_write_blocking(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
-	i2c_write_blocking(&vl53l5cx_i2c, p_platform->address, &value, 1, false);
-
+	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
+	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, &value, 1, false);
+	#endif
 	return 0;
 }
 
@@ -96,7 +115,7 @@ uint8_t WrMulti(
 		uint8_t *p_values,
 		uint32_t size)
 {	
-	#if 1
+	#if 0
 	// send (up to) 32bytes(inlude 2bytes for addr) each
 	uint32_t start_index = 0;
 	uint32_t remain_bytes = size;
@@ -106,8 +125,8 @@ uint8_t WrMulti(
 		if (len > 30) len = 30;
 
 		uint8_t tmp[2] = {(uint8_t)(RegisterAdress >> 8 & 0xFF), (uint8_t)(RegisterAdress & 0xFF)};
-		i2c_write_blocking(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
-		i2c_write_blocking(&vl53l5cx_i2c, p_platform->address, &p_values[start_index], (size_t)len, false);
+		i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
+		i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, &p_values[start_index], (size_t)len, false);
 
 		start_index += len;
 		remain_bytes -= len;
@@ -116,9 +135,15 @@ uint8_t WrMulti(
 	#endif
 
 	#if 0
-	uint8_t tmp[2] = {(uint8_t)(RegisterAdress >> 8 & 0xFF), (uint8_t)(RegisterAdress & 0xFF)};
-	i2c_write_blocking(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
-	i2c_write_blocking(&vl53l5cx_i2c, p_platform->address, p_values, size, false);
+	i2c_buffer[0] = (uint8_t)(RegisterAdress >> 8); i2c_buffer[1] = (uint8_t)(RegisterAdress & 0xFF);
+	memcpy(&i2c_buffer[2], p_values, size);
+	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, i2c_buffer, (size + 2), false);
+	#endif
+
+	#if 1
+	uint8_t tmp[2] = {(uint8_t)(RegisterAdress >> 8), (uint8_t)(RegisterAdress & 0xFF)};
+	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
+	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, p_values, size, false);
 	#endif
 
 	return 0;
@@ -130,31 +155,31 @@ uint8_t RdMulti(
 		uint8_t *p_values,
 		uint32_t size)
 {	
-	#if 1
+	#if 0
 	// read (up to) 32bytes(inlude 2bytes for addr) each
 	uint32_t start_index = 0;
 	uint32_t remain_bytes = size;
 
 	uint8_t tmp[2] = {(uint8_t)(RegisterAdress >> 8 & 0xFF), (uint8_t)(RegisterAdress & 0xFF)};
-	i2c_write_blocking(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
+	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
 
 	while (remain_bytes > 0) {
 		uint32_t len = remain_bytes;
 		if (len > 32) len = 32;
 		if (remain_bytes > 32) {
-			i2c_read_blocking(&vl53l5cx_i2c, p_platform->address, &p_values[start_index], (size_t)len, true);
+			i2c_read_with_printf(&vl53l5cx_i2c, p_platform->address, &p_values[start_index], (size_t)len, true);
 		} else {
-			i2c_read_blocking(&vl53l5cx_i2c, p_platform->address, &p_values[start_index], (size_t)len, false);
+			i2c_read_with_printf(&vl53l5cx_i2c, p_platform->address, &p_values[start_index], (size_t)len, false);
 		}
 		start_index += len;
 		remain_bytes -= len;
 	}
 	#endif
 
-	#if 0
+	#if 1
 	uint8_t tmp[2] = {(uint8_t)(RegisterAdress >> 8 & 0xFF), (uint8_t)(RegisterAdress & 0xFF)};
-	i2c_write_blocking(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
-	i2c_read_blocking(&vl53l5cx_i2c, p_platform->address, p_values, size, false);
+	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
+	i2c_read_with_printf(&vl53l5cx_i2c, p_platform->address, p_values, size, false);
 	#endif
 
 	return 0;
