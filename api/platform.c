@@ -64,19 +64,18 @@
 #include "platform.h"
 
 extern i2c_inst_t vl53l5cx_i2c;
-//uint8_t i2c_buffer[32770];
 
 int i2c_write_with_printf(i2c_inst_t* i2c_p, uint8_t addr, uint8_t* src, size_t size, bool nostop) {
-	printf("w: %x %0x %d ", addr, *src, size);
+	//printf("w: %x %0x %d ", addr, *src, size);
 	int ret = i2c_write_blocking(i2c_p, addr, src, size, nostop);
-	printf("s: %d\n", ret);
+	//printf("s: %d\n", ret);
 	return (ret);
 }
 
 int i2c_read_with_printf(i2c_inst_t* i2c_p, uint8_t addr, uint8_t* src, size_t size, bool nostop) {
-	printf("r: %x %0x %d ", addr, *src, size);
+	//printf("r: %x %0x %d ", addr, *src, size);
 	int ret = i2c_read_blocking(i2c_p, addr, src, size, nostop);
-	printf("s: %d\n", ret);
+	//printf("s: %d\n", ret);
 	return 	(ret);
 }
 
@@ -85,14 +84,12 @@ uint8_t RdByte(
 		uint16_t RegisterAdress,
 		uint8_t *p_value)
 {	
-	//RdMulti(p_platform, RegisterAdress, p_value, 1);
-	#if 1
 	// addr: higher byte first, lower byte second.
 	uint8_t tmp[2] = {(uint8_t)(RegisterAdress >> 8 & 0xFF), (uint8_t)(RegisterAdress & 0xFF)};
 	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
-	i2c_read_with_printf(&vl53l5cx_i2c, p_platform->address, p_value, 1, false);
-	#endif
-	return 0;
+	int8_t ret = i2c_read_with_printf(&vl53l5cx_i2c, p_platform->address, p_value, 1, false);
+
+	return ((ret == PICO_ERROR_GENERIC) ? 255 : 0);
 }
 
 uint8_t WrByte(
@@ -100,13 +97,11 @@ uint8_t WrByte(
 		uint16_t RegisterAdress,
 		uint8_t value)
 {
-	//WrMulti(p_platform, RegisterAdress, &value, 1);
-	#if 1
-	uint8_t tmp[2] = {(uint8_t)(RegisterAdress >> 8 & 0xFF), (uint8_t)(RegisterAdress & 0xFF)};
-	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
-	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, &value, 1, false);
-	#endif
-	return 0;
+
+	uint8_t tmp[3] = {(uint8_t)(RegisterAdress >> 8 & 0xFF), (uint8_t)(RegisterAdress & 0xFF), value};
+	int8_t ret = i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, tmp, 3, false);
+
+	return ((ret == PICO_ERROR_GENERIC) ? 255 : 0);
 }
 
 uint8_t WrMulti(
@@ -140,10 +135,91 @@ uint8_t WrMulti(
 	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, i2c_buffer, (size + 2), false);
 	#endif
 
-	#if 1
+	#if 0
 	uint8_t tmp[2] = {(uint8_t)(RegisterAdress >> 8), (uint8_t)(RegisterAdress & 0xFF)};
 	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
 	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, p_values, size, false);
+	#endif
+
+	#if 1
+	uint8_t tmp[2] = {(uint8_t)(RegisterAdress >> 8), (uint8_t)(RegisterAdress & 0xFF)};
+	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
+
+	// send without Start conditions between chunks
+	// code below originally comes from "pico-sdk/src/rp2_common/hardware_i2c/i2c.c"
+	// which is under BSD 3-Clause "New" or "Reviced" License:
+	/*
+	Copyright 2020 (c) 2020 Raspberry Pi (Trading) Ltd.
+
+	Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
+	following conditions are met:
+
+	1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following
+	disclaimer.
+
+	2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following
+	disclaimer in the documentation and/or other materials provided with the distribution.
+
+	3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products
+	derived from this software without specific prior written permission.
+
+	THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+	INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+	DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+	SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+	SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+	WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+	THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+	*/
+	uint8_t *src = p_values;
+	bool abort = false;
+    for (int byte_ctr = 0; byte_ctr < size; ++byte_ctr) {
+        bool first = byte_ctr == 0;
+        bool last = byte_ctr == size - 1;
+
+        (&vl53l5cx_i2c)->hw->data_cmd =
+                bool_to_bit(last) << I2C_IC_DATA_CMD_STOP_LSB |
+                *src++;
+
+        // Wait until the transmission of the address/data from the internal
+        // shift register has completed. For this to function correctly, the
+        // TX_EMPTY_CTRL flag in IC_CON must be set. The TX_EMPTY_CTRL flag
+        // was set in i2c_init.
+        do {
+            tight_loop_contents();
+        } while (!((&vl53l5cx_i2c)->hw->raw_intr_stat & I2C_IC_RAW_INTR_STAT_TX_EMPTY_BITS));
+
+        // If there was a timeout, don't attempt to do anything else.
+        bool abort_reason = (&vl53l5cx_i2c)->hw->tx_abrt_source;
+        if (abort_reason) {
+            // Note clearing the abort flag also clears the reason, and
+            // this instance of flag is clear-on-read! Note also the
+            // IC_CLR_TX_ABRT register always reads as 0.
+            (&vl53l5cx_i2c)->hw->clr_tx_abrt;
+            abort = true;
+        }
+
+        if (abort || last) {
+			// If the transaction was aborted or if it completed
+			// successfully wait until the STOP condition has occured.
+
+			// TODO Could there be an abort while waiting for the STOP
+			// condition here? If so, additional code would be needed here
+			// to take care of the abort.
+			do {
+				tight_loop_contents();
+			} while (!((&vl53l5cx_i2c)->hw->raw_intr_stat & I2C_IC_RAW_INTR_STAT_STOP_DET_BITS));
+        }
+
+        // Note the hardware issues a STOP automatically on an abort condition.
+        // Note also the hardware clears RX FIFO as well as TX on abort,
+        // because we set hwparam IC_AVOID_RX_FIFO_FLUSH_ON_TX_ABRT to 0.
+        if (abort) return 255;
+    }
+
+	// do not send "Restart"
+	(&vl53l5cx_i2c)->restart_on_next = false;
+	// code originally from pico-sdk until here
 	#endif
 
 	return 0;
@@ -155,34 +231,11 @@ uint8_t RdMulti(
 		uint8_t *p_values,
 		uint32_t size)
 {	
-	#if 0
-	// read (up to) 32bytes(inlude 2bytes for addr) each
-	uint32_t start_index = 0;
-	uint32_t remain_bytes = size;
-
 	uint8_t tmp[2] = {(uint8_t)(RegisterAdress >> 8 & 0xFF), (uint8_t)(RegisterAdress & 0xFF)};
 	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
+	int8_t ret = i2c_read_with_printf(&vl53l5cx_i2c, p_platform->address, p_values, size, false);
 
-	while (remain_bytes > 0) {
-		uint32_t len = remain_bytes;
-		if (len > 32) len = 32;
-		if (remain_bytes > 32) {
-			i2c_read_with_printf(&vl53l5cx_i2c, p_platform->address, &p_values[start_index], (size_t)len, true);
-		} else {
-			i2c_read_with_printf(&vl53l5cx_i2c, p_platform->address, &p_values[start_index], (size_t)len, false);
-		}
-		start_index += len;
-		remain_bytes -= len;
-	}
-	#endif
-
-	#if 1
-	uint8_t tmp[2] = {(uint8_t)(RegisterAdress >> 8 & 0xFF), (uint8_t)(RegisterAdress & 0xFF)};
-	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
-	i2c_read_with_printf(&vl53l5cx_i2c, p_platform->address, p_values, size, false);
-	#endif
-
-	return 0;
+	return ((ret == PICO_ERROR_GENERIC) ? 255 : 0);
 }
 
 uint8_t Reset_Sensor(
@@ -228,7 +281,6 @@ uint8_t WaitMs(
 		VL53L5CX_Platform *p_platform,
 		uint32_t TimeMs)
 {
-	/* Need to be implemented by customer. This function returns 0 if OK */
 	sleep_ms(TimeMs);
 	return 0;
 }

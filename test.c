@@ -16,15 +16,6 @@ int main (void) {
     gpio_init(14);
     gpio_set_dir(14, true);
 
-    #if 0
-    // reset i2c interface of vl53l5cx
-    gpio_put(14, 0);
-    sleep_us(500);
-    gpio_put(14, 1);
-    sleep_us(500);
-    gpio_put(14, 0);
-    #endif
-
     i2c_init(&vl53l5cx_i2c, 400 * 1000); // 400kHz
     gpio_set_function(8, GPIO_FUNC_I2C);
     gpio_set_function(9, GPIO_FUNC_I2C);
@@ -52,7 +43,7 @@ int main (void) {
 
     status = vl53l5cx_start_ranging(&dev);
 
-    for (int i = 0; i < 10; i++) {
+    while (1) {
         uint8_t is_ready;
         // check if data is ready
         status = vl53l5cx_check_data_ready(&dev, &is_ready);
@@ -62,9 +53,9 @@ int main (void) {
             printf("streamcount: %3u\n", dev.streamcount);
             for (int j = 0; j < 16; j++) {
                 printf("zone: %3d, status: %3u, distance: %3d\n", 
-                    i,
-                    results.target_status[VL53L5CX_NB_TARGET_PER_ZONE*i],
-                    results.distance_mm[VL53L5CX_NB_TARGET_PER_ZONE*i]);
+                    j,
+                    results.target_status[VL53L5CX_NB_TARGET_PER_ZONE*j],
+                    results.distance_mm[VL53L5CX_NB_TARGET_PER_ZONE*j]);
             }
         }
         sleep_ms(5);

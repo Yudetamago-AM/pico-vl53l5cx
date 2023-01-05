@@ -7,10 +7,6 @@ add_library(vl53l5cx
     ${CMAKE_CURRENT_LIST_DIR}/vl53l5cx_plugin_xtalk.c
 )
 
-#target_sources(vl53l5cx
-#    INTERFACE  
-#)
-
 target_link_libraries(vl53l5cx
     PUBLIC
     pico_stdlib
