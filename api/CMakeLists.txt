@@ -1,5 +1,6 @@
-add_library(vl53l5cx
-    STATIC
+add_library(vl53l5cx INTERFACE)
+
+target_sources(vl53l5cx INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/platform.c
     ${CMAKE_CURRENT_LIST_DIR}/vl53l5cx_api.c
     ${CMAKE_CURRENT_LIST_DIR}/vl53l5cx_plugin_detection_thresholds.c
@@ -8,7 +9,7 @@ add_library(vl53l5cx
 )
 
 target_link_libraries(vl53l5cx
-    PUBLIC
+    INTERFACE
     pico_stdlib
     hardware_i2c
 )
