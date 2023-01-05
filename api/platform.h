@@ -85,7 +85,7 @@ typedef struct
 	 * needs to be added */
 	/* Example for most standard platform : I2C address of sensor */
     uint8_t  			address;
-	//i2c_inst_t 			i2c;
+	i2c_inst_t 			*i2c;
 } VL53L5CX_Platform;
 
 /*

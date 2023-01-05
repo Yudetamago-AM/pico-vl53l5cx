@@ -23,8 +23,8 @@ int main (void) {
     static VL53L5CX_Configuration dev;
     static VL53L5CX_ResultsData results;
 
-    dev.platform.address = 0x29;
-    //dev.platform.i2c_bus = I2C_BUS_TOF;
+    dev.platform.address = 0x29; // 0x52 >> 1
+    dev.platform.i2c = &vl53l5cx_i2c;
 
     printf("VL53L5CX ULD version: %s\n", VL53L5CX_API_REVISION);
 

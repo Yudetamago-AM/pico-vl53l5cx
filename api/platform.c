@@ -63,21 +63,23 @@
 
 #include "platform.h"
 
-extern i2c_inst_t vl53l5cx_i2c;
+//extern i2c_inst_t vl53l5cx_i2c;
 
-int i2c_write_with_printf(i2c_inst_t* i2c_p, uint8_t addr, uint8_t* src, size_t size, bool nostop) {
+#if 0
+int i2c_write_with_printfa(i2c_inst_t* i2c_p, uint8_t addr, uint8_t* src, size_t size, bool nostop) {
 	//printf("w: %x %0x %d ", addr, *src, size);
 	int ret = i2c_write_blocking(i2c_p, addr, src, size, nostop);
 	//printf("s: %d\n", ret);
 	return (ret);
 }
 
-int i2c_read_with_printf(i2c_inst_t* i2c_p, uint8_t addr, uint8_t* src, size_t size, bool nostop) {
+int i2c_read_with_printfa(i2c_inst_t* i2c_p, uint8_t addr, uint8_t* src, size_t size, bool nostop) {
 	//printf("r: %x %0x %d ", addr, *src, size);
 	int ret = i2c_read_blocking(i2c_p, addr, src, size, nostop);
 	//printf("s: %d\n", ret);
 	return 	(ret);
 }
+#endif
 
 uint8_t RdByte(
 		VL53L5CX_Platform *p_platform,
@@ -86,8 +88,8 @@ uint8_t RdByte(
 {	
 	// addr: higher byte first, lower byte second.
 	uint8_t tmp[2] = {(uint8_t)(RegisterAdress >> 8 & 0xFF), (uint8_t)(RegisterAdress & 0xFF)};
-	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
-	int8_t ret = i2c_read_with_printf(&vl53l5cx_i2c, p_platform->address, p_value, 1, false);
+	i2c_write_blocking(p_platform->i2c, p_platform->address, tmp, 2, true);
+	int8_t ret = i2c_read_blocking(p_platform->i2c, p_platform->address, p_value, 1, false);
 
 	return ((ret == PICO_ERROR_GENERIC) ? 255 : 0);
 }
@@ -99,7 +101,7 @@ uint8_t WrByte(
 {
 
 	uint8_t tmp[3] = {(uint8_t)(RegisterAdress >> 8 & 0xFF), (uint8_t)(RegisterAdress & 0xFF), value};
-	int8_t ret = i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, tmp, 3, false);
+	int8_t ret = i2c_write_blocking(p_platform->i2c, p_platform->address, tmp, 3, false);
 
 	return ((ret == PICO_ERROR_GENERIC) ? 255 : 0);
 }
@@ -120,8 +122,8 @@ uint8_t WrMulti(
 		if (len > 30) len = 30;
 
 		uint8_t tmp[2] = {(uint8_t)(RegisterAdress >> 8 & 0xFF), (uint8_t)(RegisterAdress & 0xFF)};
-		i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
-		i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, &p_values[start_index], (size_t)len, false);
+		i2c_write_blocking(p_platform->i2c, p_platform->address, tmp, 2, true);
+		i2c_write_blocking(p_platform->i2c, p_platform->address, &p_values[start_index], (size_t)len, false);
 
 		start_index += len;
 		remain_bytes -= len;
@@ -132,18 +134,18 @@ uint8_t WrMulti(
 	#if 0
 	i2c_buffer[0] = (uint8_t)(RegisterAdress >> 8); i2c_buffer[1] = (uint8_t)(RegisterAdress & 0xFF);
 	memcpy(&i2c_buffer[2], p_values, size);
-	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, i2c_buffer, (size + 2), false);
+	i2c_write_blocking(p_platform->i2c, p_platform->address, i2c_buffer, (size + 2), false);
 	#endif
 
 	#if 0
 	uint8_t tmp[2] = {(uint8_t)(RegisterAdress >> 8), (uint8_t)(RegisterAdress & 0xFF)};
-	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
-	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, p_values, size, false);
+	i2c_write_blocking(p_platform->i2c, p_platform->address, tmp, 2, true);
+	i2c_write_blocking(p_platform->i2c, p_platform->address, p_values, size, false);
 	#endif
 
 	#if 1
 	uint8_t tmp[2] = {(uint8_t)(RegisterAdress >> 8), (uint8_t)(RegisterAdress & 0xFF)};
-	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
+	i2c_write_blocking(p_platform->i2c, p_platform->address, tmp, 2, true);
 
 	// send without Start conditions between chunks
 	// code below originally comes from "pico-sdk/src/rp2_common/hardware_i2c/i2c.c"
@@ -177,7 +179,7 @@ uint8_t WrMulti(
         bool first = byte_ctr == 0;
         bool last = byte_ctr == size - 1;
 
-        (&vl53l5cx_i2c)->hw->data_cmd =
+        (p_platform->i2c)->hw->data_cmd =
                 bool_to_bit(last) << I2C_IC_DATA_CMD_STOP_LSB |
                 *src++;
 
@@ -187,15 +189,15 @@ uint8_t WrMulti(
         // was set in i2c_init.
         do {
             tight_loop_contents();
-        } while (!((&vl53l5cx_i2c)->hw->raw_intr_stat & I2C_IC_RAW_INTR_STAT_TX_EMPTY_BITS));
+        } while (!((p_platform->i2c)->hw->raw_intr_stat & I2C_IC_RAW_INTR_STAT_TX_EMPTY_BITS));
 
         // If there was a timeout, don't attempt to do anything else.
-        bool abort_reason = (&vl53l5cx_i2c)->hw->tx_abrt_source;
+        bool abort_reason = (p_platform->i2c)->hw->tx_abrt_source;
         if (abort_reason) {
             // Note clearing the abort flag also clears the reason, and
             // this instance of flag is clear-on-read! Note also the
             // IC_CLR_TX_ABRT register always reads as 0.
-            (&vl53l5cx_i2c)->hw->clr_tx_abrt;
+            (p_platform->i2c)->hw->clr_tx_abrt;
             abort = true;
         }
 
@@ -208,7 +210,7 @@ uint8_t WrMulti(
 			// to take care of the abort.
 			do {
 				tight_loop_contents();
-			} while (!((&vl53l5cx_i2c)->hw->raw_intr_stat & I2C_IC_RAW_INTR_STAT_STOP_DET_BITS));
+			} while (!((p_platform->i2c)->hw->raw_intr_stat & I2C_IC_RAW_INTR_STAT_STOP_DET_BITS));
         }
 
         // Note the hardware issues a STOP automatically on an abort condition.
@@ -218,7 +220,7 @@ uint8_t WrMulti(
     }
 
 	// do not send "Restart"
-	(&vl53l5cx_i2c)->restart_on_next = false;
+	(p_platform->i2c)->restart_on_next = false;
 	// code originally from pico-sdk until here
 	#endif
 
@@ -232,8 +234,8 @@ uint8_t RdMulti(
 		uint32_t size)
 {	
 	uint8_t tmp[2] = {(uint8_t)(RegisterAdress >> 8 & 0xFF), (uint8_t)(RegisterAdress & 0xFF)};
-	i2c_write_with_printf(&vl53l5cx_i2c, p_platform->address, tmp, 2, true);
-	int8_t ret = i2c_read_with_printf(&vl53l5cx_i2c, p_platform->address, p_values, size, false);
+	i2c_write_blocking(p_platform->i2c, p_platform->address, tmp, 2, true);
+	int8_t ret = i2c_read_blocking(p_platform->i2c, p_platform->address, p_values, size, false);
 
 	return ((ret == PICO_ERROR_GENERIC) ? 255 : 0);
 }
