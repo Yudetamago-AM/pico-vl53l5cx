@@ -78,19 +78,14 @@ static uint8_t _vl53l5cx_poll_for_answer(
 		uint8_t					mask,
 		uint8_t					expected_value)
 {
-	// timeout error at:
-	// _vl53l5cx_poll_for_answer(p_dev, 4, 0, VL53L5CX_UI_CMD_STATUS, 0xff, 2);
-	// the issue: could not write firmware correctly
-	// follow the datasheet figure
+	
 	uint8_t status = VL53L5CX_STATUS_OK;
 	uint8_t timeout = 0;
 
 	do {
 		status |= RdMulti(&(p_dev->platform), address,
 				p_dev->temp_buffer, size);
-//printf("poll: %x\n", p_dev->temp_buffer[pos] & mask);
-//for(int i = 0; i < size; i++) printf("%x ", p_dev->temp_buffer[pos] & mask);
-//printf("\n");
+
 		status |= WaitMs(&(p_dev->platform), 10);
 
 		if(timeout >= (uint8_t)200)	/* 2s timeout */
@@ -328,8 +323,6 @@ uint8_t vl53l5cx_init(
 	status |= WrByte(&(p_dev->platform), 0x000A, 0x01);
 	status |= WaitMs(&(p_dev->platform), 100);
 
-//printf("sw reboot sequence %d\n", status);
-
 	/* Wait for sensor booted (several ms required to get sensor ready ) */
 	status |= WrByte(&(p_dev->platform), 0x7fff, 0x00);
 	status |= _vl53l5cx_poll_for_answer(p_dev, 1, 0, 0x06, 0xff, 1);
@@ -340,21 +333,15 @@ uint8_t vl53l5cx_init(
 	status |= WrByte(&(p_dev->platform), 0x000E, 0x01);
 	status |= WrByte(&(p_dev->platform), 0x7fff, 0x02);
 
-//printf("wait for sensor booted %d\n", status);
-
 	/* Enable FW access */
 	status |= WrByte(&(p_dev->platform), 0x03, 0x0D);
 	status |= WrByte(&(p_dev->platform), 0x7fff, 0x01);
 	status |= _vl53l5cx_poll_for_answer(p_dev, 1, 0, 0x21, 0x10, 0x10);
 	status |= WrByte(&(p_dev->platform), 0x7fff, 0x00);
 
-//printf("enable fw access %d\n", status);
-
 	/* Enable host access to GO1 */
 	status |= RdByte(&(p_dev->platform), 0x7fff, &tmp);
 	status |= WrByte(&(p_dev->platform), 0x0C, 0x01);
-
-//printf("enable host access %d\n", status);
 
 	/* Power ON status */
 	status |= WrByte(&(p_dev->platform), 0x7fff, 0x00);
@@ -373,8 +360,6 @@ uint8_t vl53l5cx_init(
 	status |= WrByte(&(p_dev->platform), 0x219, 0x00);
 	status |= WrByte(&(p_dev->platform), 0x21B, 0x00);
 
-//printf("power on status %d\n", status);
-
 	/* Wake up MCU */
 	status |= WrByte(&(p_dev->platform), 0x7fff, 0x00);
 	status |= RdByte(&(p_dev->platform), 0x7fff, &tmp);
@@ -382,8 +367,6 @@ uint8_t vl53l5cx_init(
 	status |= WrByte(&(p_dev->platform), 0x7fff, 0x01);
 	status |= WrByte(&(p_dev->platform), 0x20, 0x07);
 	status |= WrByte(&(p_dev->platform), 0x20, 0x06);
-
-//printf("wake up mcu %d\n", status);
 
 	/* Download FW into VL53L5 */
 	status |= WrByte(&(p_dev->platform), 0x7fff, 0x09);
@@ -397,8 +380,6 @@ uint8_t vl53l5cx_init(
 		(uint8_t*)&VL53L5CX_FIRMWARE[0x10000],0x5000);
 	status |= WrByte(&(p_dev->platform), 0x7fff, 0x01);
 
-//printf("download fw %d\n", status);
-
 	/* Check if FW correctly downloaded */
 	status |= WrByte(&(p_dev->platform), 0x7fff, 0x02);
 	status |= WrByte(&(p_dev->platform), 0x03, 0x0D);
@@ -411,8 +392,6 @@ uint8_t vl53l5cx_init(
 	status |= WrByte(&(p_dev->platform), 0x7fff, 0x00);
 	status |= RdByte(&(p_dev->platform), 0x7fff, &tmp);
 	status |= WrByte(&(p_dev->platform), 0x0C, 0x01);
-
-//printf("check fw %d\n", status);
 
 	/* Reset MCU and wait boot */
 	status |= WrByte(&(p_dev->platform), 0x7FFF, 0x00);
@@ -431,32 +410,25 @@ uint8_t vl53l5cx_init(
 
 	status |= WrByte(&(p_dev->platform), 0x7fff, 0x02);
 
-//printf("reset mcu %d\n", status);
-
 	/* Get offset NVM data and store them into the offset buffer */
 	status |= WrMulti(&(p_dev->platform), 0x2fd8,
 		(uint8_t*)VL53L5CX_GET_NVM_CMD, sizeof(VL53L5CX_GET_NVM_CMD));
-//printf("%d\n", status); // 0
+
 	status |= _vl53l5cx_poll_for_answer(p_dev, 4, 0,
 		VL53L5CX_UI_CMD_STATUS, 0xff, 2);
-//printf("%d\n", status); // 1 HERE!!
+
 	status |= RdMulti(&(p_dev->platform), VL53L5CX_UI_CMD_START,
 		p_dev->temp_buffer, VL53L5CX_NVM_DATA_SIZE);
-//printf("%d\n", status);
+
 	(void)memcpy(p_dev->offset_data, p_dev->temp_buffer,
 		VL53L5CX_OFFSET_BUFFER_SIZE);
-//printf("%d\n", status);
-	status |= _vl53l5cx_send_offset_data(p_dev, VL53L5CX_RESOLUTION_4X4);
-//printf("%d\n", status);
 
-//printf("get offset data %d\n", status);
+	status |= _vl53l5cx_send_offset_data(p_dev, VL53L5CX_RESOLUTION_4X4);
 
 	/* Set default Xtalk shape. Send Xtalk to sensor */
 	(void)memcpy(p_dev->xtalk_data, (uint8_t*)VL53L5CX_DEFAULT_XTALK,
 		VL53L5CX_XTALK_BUFFER_SIZE);
 	status |= _vl53l5cx_send_xtalk_data(p_dev, VL53L5CX_RESOLUTION_4X4);
-
-//printf("set default xtalk %d\n", status);
 
 	/* Send default configuration to VL53L5CX firmware */
 	status |= WrMulti(&(p_dev->platform), 0x2c34,
@@ -477,8 +449,6 @@ uint8_t vl53l5cx_init(
 	status |= vl53l5cx_dci_write_data(p_dev, (uint8_t*)&single_range,
 			VL53L5CX_DCI_SINGLE_RANGE,
 			(uint16_t)sizeof(single_range));
-
-//printf("send default config %d\n", status);
 
 exit:
 	return status;

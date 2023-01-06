@@ -83,8 +83,10 @@ typedef struct
 {
 	/* To be filled with customer's platform. At least an I2C address/descriptor
 	 * needs to be added */
-	/* Example for most standard platform : I2C address of sensor */
     uint8_t  			address;
+	// make something like this to your main code:
+	// i2c_inst_t vl53l5cx_i2c = {i2c0_hw, false};
+	// and set this as shown in examples
 	i2c_inst_t 			*i2c;
 } VL53L5CX_Platform;
 
