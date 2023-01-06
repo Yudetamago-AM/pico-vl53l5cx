@@ -1,4 +1,5 @@
-
+// This code is based on ST's VL53L5CX ULD examples
+// which is under BSD 3-clause "New" or "Revised" License(shown at the last part of this file)
 
 /************************************************************/
 /*  VL53L5CX ULD motion indicator with detection thresholds */

@@ -13,4 +13,4 @@ set(CMAKE_CXX_STANDARD 17)
 pico_sdk_init()
 
 add_subdirectory("api")
-add_subdirectory("example")
+add_subdirectory("examples")
