@@ -1,6 +1,6 @@
 # pico-vl53l5cx
 
-Raspberry Pi Pico（や他のRP2040ボード）でSTのToFセンサ「VL53L5CX」を使うためのライブラリとその使用例です。
+Raspberry Pi Pico（や他のRP2040ボード）でSTのToFセンサ「VL53L5CX」を使うためのライブラリとその使用例です。Raspberry Pi Pico C/C++ SDKで書かれています。が、コードはすべてCです。
 
 このセンサは、RAMにファームウェアを保持するため、起動時にファームウェアを書き込まないと使えません。しかし、書き込むファームウェア自体は、バイナリファイルの形でしか提供されていません。また、レジスタの情報なども非公開です。
 なので、このライブラリはSTの [Ultra Lite Driver (ULD) for VL53L5CX multi-zone sensor](https://www.st.com/ja/embedded-software/stsw-img023.html) が内容のほとんどです。
