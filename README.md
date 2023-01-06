@@ -7,9 +7,12 @@ Raspberry Pi Pico（や他のRP2040ボード）でSTのToFセンサ「VL53L5CX�
 
 ## 使用例で遊ぶ
 
-1. ```git clone https://github.com/Yudetamago-AM/pico-vl53l5cx.git```あるいはCode>Download Zip
-1. ダウンロードしてきたものをビルドする（環境によりやり方が異なると思います）
-1. ```build/examples/```内に各使用例のフォルダ（と実行ファイル）が生成されます。
+1. ```git clone https://github.com/Yudetamago-AM/pico-vl53l5cx.git```あるいはCode>Download Zipでダウンロードし解凍
+1. ```example```フォルダ内の各ファイルにI2Cのピン番号、割り込みピンのピン番号（detection_threshold）、I2Cのバスなどを記入する
+1. ビルドする（環境によりやり方が異なると思います）
+1. ```build/examples/```内に各使用例のフォルダ（と実行ファイル）が生成される
+1. 書き込む（ボードによりやり方が異なると思います）
+1. シリアルモニタを確認する。なお、例によっては接続する前に終わってしまうものもあると思うので、シリアルモニタ開いたまま一旦接続断して書き込む・ループの回数を変更するなどして対応してください。
 
 ## 自分のコードで使う
 
